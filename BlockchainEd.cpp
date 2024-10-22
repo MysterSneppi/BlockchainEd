@@ -17,15 +17,29 @@ public:
     string data;
     string prevHash;
     string hash;
+    time_t timestamp;
+    int nonce;
 
     Block(int idx, const string& data, const string& prevHash)
-        : index(idx), data(data), prevHash(prevHash), hash(calculateHash()) {
+        : index(idx), data(data), prevHash(prevHash),timestamp(time(nullptr)),nonce(0), hash(calculateHash()) {
     }
+
+    void mineBlock(int difficualty) {
+        string target(difficualty, '0');
+        while (hash.substr(0, difficualty) != target) {
+            nonce++;
+            hash = calculateHash();
+        }
+        cout << "Block mined: " << hash << " with nonce: " << nonce << endl;
+    }
+
+
+
 
 private:
     string calculateHash() const {
         stringstream ss;
-        ss << index << data << prevHash;
+        ss << index << data << prevHash << timestamp << nonce;
 
         string input = ss.str();
         unsigned char hash[SHA256_DIGEST_LENGTH];
@@ -43,30 +57,37 @@ private:
 
 class Blockchain {
 public:
-    Blockchain() {
+    Blockchain(int difficulty) : difficulty(difficulty) {
         chain.push_back(createGenesisBlock());
     }
 
     void addBlock(const string& data) {
         const Block& prevBlock = chain.back();
-        chain.push_back(Block(prevBlock.index + 1, data, prevBlock.hash));
+        Block newBlock(prevBlock.index + 1, data, prevBlock.hash);
+        newBlock.mineBlock(difficulty);
+        chain.push_back(newBlock);
     }
 
     void printChain() const {
         for (const auto& block : chain) {
-            cout << "Block " << block.index << ": " << block.hash << endl;
+            cout << "Block " << block.index << " [Hash: " << block.hash << ", Nonce: " << block.nonce << "]" << endl;
         }
     }
 
 private:
     vector<Block> chain;
+    int difficulty;
+
     Block createGenesisBlock() {
-        return Block(0, "GenesisBlock", "0");
+        Block genesisBlock(0, "GenesisBlock", "0");
+        genesisBlock.mineBlock(difficulty);
+        return genesisBlock;
     }
 };
 
 int main() {
-    Blockchain blockchain;
+    int difficulty = 4;
+    Blockchain blockchain(difficulty);
 
     blockchain.addBlock("FirstBlock");
     blockchain.addBlock("SecondBlock");
